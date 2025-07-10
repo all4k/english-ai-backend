@@ -3,9 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import openai
 import os
 
+# Inicjalizacja API
 app = FastAPI()
 
-# Ustawienie CORS – umożliwia komunikację z Flutterem
+# Zezwól na połączenia z Fluttera
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,61 +14,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ustaw swój klucz OpenAI (dodamy przez zmienne środowiskowe w Aptible)
+# Ustaw klucz API z Rendera
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-from openai import OpenAI
+# Historia rozmowy (przechowywana tymczasowo w pamięci)
+chat_history = []
 
-client = OpenAI()
+@app.get("/")
+def root():
+    return {"message": "english-ai-backend działa!"}
 
 @app.post("/chat")
 async def chat(request: Request):
     data = await request.json()
-    user_input = data.get("message", "")
+    user_message = data.get("message")
 
-    if not user_input:
-        return {"error": "Brak wiadomości od użytkownika"}
+    # Dodaj wiadomość użytkownika do historii
+    chat_history.append({"role": "user", "content": user_message})
 
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "Jesteś pomocnym nauczycielem angielskiego. Odpowiadaj krótko i prostym językiem."},
-                {"role": "user", "content": user_input},
-            ]
-        )
-        answer = response.choices[0].message.content.strip()
-        return {"reply": answer}
-
-    except Exception as e:
-        return {"error": str(e)}
-
-@app.get("/")
-def read_root():
-    return {"message": "english-ai-backend działa!"}
-
-async def chat(request: Request):
-    data = await request.json()
-    message = data.get("message", "")
-
-    if not message:
-        return {"error": "No message provided."}
-
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",  # możesz zmienić na gpt-4 jeśli chcesz
-        messages=[
-            {"role": "system", "content": "You are a helpful English teacher."},
-            {"role": "user", "content": message},
-        ],
-        max_tokens=200,
-        temperature=0.7
+    # Wyślij całą historię do OpenAI
+    response = openai.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=chat_history
     )
 
-    reply = response['choices'][0]['message']['content']
-    return {"reply": reply}
+    # Odpowiedź asystenta
+    assistant_reply = response.choices[0].message.content
 
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
+    # Zapisz odpowiedź do historii
+    chat_history.append({"role": "assistant", "content": assistant_reply})
+
+    return {"reply": assistant_reply}
 
