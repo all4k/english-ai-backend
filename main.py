@@ -16,6 +16,10 @@ app.add_middleware(
 # Ustaw swój klucz OpenAI (dodamy przez zmienne środowiskowe w Aptible)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+from openai import OpenAI
+
+client = OpenAI()
+
 @app.post("/chat")
 async def chat(request: Request):
     data = await request.json()
@@ -25,7 +29,7 @@ async def chat(request: Request):
         return {"error": "Brak wiadomości od użytkownika"}
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Jesteś pomocnym nauczycielem angielskiego. Odpowiadaj krótko i prostym językiem."},
