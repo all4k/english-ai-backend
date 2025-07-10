@@ -17,6 +17,27 @@ app.add_middleware(
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 @app.post("/chat")
+async def chat(request: Request):
+    data = await request.json()
+    user_input = data.get("message", "")
+
+    if not user_input:
+        return {"error": "Brak wiadomości od użytkownika"}
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Jesteś pomocnym nauczycielem angielskiego. Odpowiadaj krótko i prostym językiem."},
+                {"role": "user", "content": user_input},
+            ]
+        )
+        answer = response.choices[0].message.content.strip()
+        return {"reply": answer}
+
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/")
 def read_root():
     return {"message": "english-ai-backend działa!"}
