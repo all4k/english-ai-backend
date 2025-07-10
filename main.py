@@ -17,6 +17,10 @@ app.add_middleware(
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 @app.post("/chat")
+@app.get("/")
+def read_root():
+    return {"message": "english-ai-backend działa!"}
+
 async def chat(request: Request):
     data = await request.json()
     message = data.get("message", "")
